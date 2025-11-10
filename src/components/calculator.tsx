@@ -92,63 +92,57 @@ type Result = ProfitFromPriceResult | PriceFromProfitResult;
 const EXPENSES_STORAGE_KEY = "profitpro-expenses";
 const HISTORY_STORAGE_KEY = "profitpro-history";
 
-
-const getDefaultExpenses = (): Expense[] => {
-    if (typeof window === 'undefined') {
-        return [{ label: "", value: undefined, type: "fixed" }];
-    }
-    try {
-        const storedExpenses = localStorage.getItem(EXPENSES_STORAGE_KEY);
-        if (storedExpenses) {
-            const parsed = JSON.parse(storedExpenses);
-            if (Array.isArray(parsed) && parsed.length > 0) {
-              return parsed.map(p => ({...p, value: p.value || undefined}));
-            }
-        }
-    } catch (error) {
-        console.error("Failed to parse expenses from localStorage", error);
-    }
-    return [{ label: "", value: undefined, type: "fixed" }];
-};
-
-const getInitialHistory = (): Calculation[] => {
-    if (typeof window === "undefined") {
-        return [];
-    }
-    try {
-        const storedHistory = localStorage.getItem(HISTORY_STORAGE_KEY);
-        if (storedHistory) {
-            const parsed = JSON.parse(storedHistory);
-            if (Array.isArray(parsed)) {
-                return parsed;
-            }
-        }
-    } catch (error) {
-        console.error("Failed to parse history from localStorage", error);
-    }
-    return [];
-};
+const defaultExpenses: Expense[] = [{ label: "", value: undefined, type: "fixed" }];
 
 
 export default function CalculatorComponent() {
   const [isPending, startTransition] = useTransition();
   const [result, setResult] = useState<Result | null>(null);
-  const [history, setHistory] = useState<Calculation[]>(getInitialHistory);
+  const [history, setHistory] = useState<Calculation[]>([]);
   const { toast } = useToast();
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       calculationMode: "profit-from-price",
       label: "",
-      expenses: getDefaultExpenses(),
+      expenses: defaultExpenses,
     },
   });
 
-  const { fields, append, remove } = useFieldArray({
+  const { fields, append, remove, replace } = useFieldArray({
     control: form.control,
     name: "expenses",
   });
+  
+  useEffect(() => {
+    if (isClient) {
+      try {
+        const storedExpenses = localStorage.getItem(EXPENSES_STORAGE_KEY);
+        if (storedExpenses) {
+          const parsed = JSON.parse(storedExpenses);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            replace(parsed.map((p: any) => ({ ...p, value: p.value || undefined })));
+          }
+        }
+        
+        const storedHistory = localStorage.getItem(HISTORY_STORAGE_KEY);
+        if (storedHistory) {
+          const parsed = JSON.parse(storedHistory);
+          if (Array.isArray(parsed)) {
+            setHistory(parsed);
+          }
+        }
+      } catch (error) {
+        console.error("Failed to parse from localStorage", error);
+      }
+    }
+  }, [isClient, replace]);
   
   const calculationMode = useWatch({
     control: form.control,
@@ -169,20 +163,24 @@ export default function CalculatorComponent() {
   });
 
   useEffect(() => {
-    try {
-        localStorage.setItem(EXPENSES_STORAGE_KEY, JSON.stringify(expenses));
-    } catch (error) {
-        console.error("Failed to save expenses to localStorage", error);
+    if (isClient) {
+      try {
+          localStorage.setItem(EXPENSES_STORAGE_KEY, JSON.stringify(expenses));
+      } catch (error) {
+          console.error("Failed to save expenses to localStorage", error);
+      }
     }
-  }, [expenses]);
+  }, [expenses, isClient]);
   
   useEffect(() => {
-    try {
-        localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(history));
-    } catch (error) {
-        console.error("Failed to save history to localStorage", error);
+    if (isClient) {
+      try {
+          localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(history));
+      } catch (error) {
+          console.error("Failed to save history to localStorage", error);
+      }
     }
-  }, [history]);
+  }, [history, isClient]);
 
   function onSubmit(values: z.infer<typeof formSchema>) {
     setResult(null);
@@ -342,6 +340,21 @@ export default function CalculatorComponent() {
     }
     return undefined; // Cannot calculate for price-from-profit mode without the final quote
   };
+  
+  if (!isClient) {
+    return (
+        <Card>
+            <CardHeader>
+                <CardTitle>Profit Calculator</CardTitle>
+            </CardHeader>
+            <CardContent>
+                <div className="flex justify-center items-center p-8">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                </div>
+            </CardContent>
+        </Card>
+    );
+  }
 
   return (
     <>
