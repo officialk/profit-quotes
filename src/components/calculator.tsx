@@ -407,7 +407,6 @@ export default function CalculatorComponent() {
         <CardContent>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-              {!isPending && renderResult()}
               
               <FormField
                 control={form.control}
@@ -623,6 +622,8 @@ export default function CalculatorComponent() {
                   </Button>
                 </div>
               </div>
+              
+              {!isPending && renderResult()}
 
               {isPending && (
                 <div className="mt-6 text-center">
