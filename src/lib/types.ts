@@ -26,3 +26,10 @@ export type ActionError = {
 
 export type ProfitFromPriceActionResponse = ProfitFromPriceResult | ActionError;
 export type PriceFromProfitActionResponse = PriceFromProfitResult | ActionError;
+
+export type Calculation = {
+    id: string;
+    label: string;
+    result: ProfitFromPriceResult | PriceFromProfitResult;
+    timestamp: string;
+};

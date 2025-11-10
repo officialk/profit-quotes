@@ -3,7 +3,7 @@ import CalculatorComponent from '@/components/calculator';
 
 export default function Home() {
   return (
-    <main className="flex min-h-screen w-full flex-col items-center justify-center bg-background p-4 sm:p-6 lg:p-8">
+    <main className="flex min-h-screen w-full flex-col items-center bg-background p-4 sm:p-6 lg:p-8">
       <div className="w-full max-w-2xl">
         <header className="mb-8 text-center">
           <div className="inline-flex items-center justify-center gap-3">
