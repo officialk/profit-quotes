@@ -15,15 +15,19 @@ const formatCurrency = (value: number) => {
   }).format(value);
 };
 
-// --- Profit From Quoted Price ---
+// --- Common Expense Schema ---
+const expenseSchema = z.object({ 
+  label: z.string().min(1, { message: "Expense label is required." }),
+  value: z.coerce.number().positive({ message: "Expense value must be positive." }),
+  type: z.enum(['fixed', 'percentage'])
+});
 
+
+// --- Profit From Quoted Price ---
 const ProfitFromPriceSchema = z.object({
-  quotedPrice: z.number().positive('Quoted price must be positive.'),
-  expenses: z.array(z.object({ 
-    label: z.string().min(1),
-    value: z.number().positive(),
-    type: z.enum(['fixed', 'percentage'])
-  })),
+  calculationMode: z.literal('profit-from-price'),
+  quotedPrice: z.coerce.number().positive('Quoted price must be positive.'),
+  expenses: z.array(expenseSchema).min(1, { message: "At least one expense is required." }),
   label: z.string().optional(),
 });
 
@@ -42,13 +46,15 @@ export async function calculateProfitFromPriceAction(
   const { quotedPrice, expenses } = validatedFields.data;
 
   try {
+    // The AI flow can't handle zero quoted price for percentage calculations.
+    const tempQuotedPriceForAI = quotedPrice > 0 ? quotedPrice : 1;
     const expenseStrings = expenses.map(e => e.type === 'fixed' ? `${e.value}` : `${e.value}%`);
+    
     const aiResult = await interpretExpenseInput({
-      expenseInput: expenseStrings.join(', '), // Join for the AI
-      quotedPrice,
+      expenseInput: expenseStrings.join(', '),
+      quotedPrice: tempQuotedPriceForAI,
     });
 
-    // The AI flow is designed to return the calculated expense value.
     const profit = quotedPrice - aiResult.expenseValue;
 
     const summary = `For a quoted price of ${formatCurrency(
@@ -68,20 +74,16 @@ export async function calculateProfitFromPriceAction(
     return {
       status: 'error',
       error:
-        'Could not interpret expenses. Please try a different format (e.g., "500" or "15%").',
+        'Could not interpret expenses. Please try a different format.',
     };
   }
 }
 
 // --- Quoted Price From Target Profit ---
-
 const PriceFromProfitSchema = z.object({
-  targetProfit: z.number().positive('Target profit must be positive.'),
-  expenses: z.array(z.object({ 
-    label: z.string().min(1),
-    value: z.number().positive(),
-    type: z.enum(['fixed', 'percentage'])
-  })),
+  calculationMode: z.literal('price-from-profit'),
+  targetProfit: z.coerce.number().positive('Target profit must be positive.'),
+  expenses: z.array(expenseSchema).min(1, { message: "At least one expense is required." }),
   label: z.string().optional(),
 });
 
