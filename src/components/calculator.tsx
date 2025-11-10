@@ -162,6 +162,12 @@ export default function CalculatorComponent() {
     name: 'expenses'
   })
 
+  const watchedQuotedPrice = useWatch({
+    control: form.control,
+    // @ts-ignore
+    name: 'quotedPrice'
+  });
+
   useEffect(() => {
     try {
         localStorage.setItem(EXPENSES_STORAGE_KEY, JSON.stringify(expenses));
@@ -323,6 +329,16 @@ export default function CalculatorComponent() {
     return null;
   }
 
+  const getCalculatedExpenseValue = (expense: Expense) => {
+    if (expense.type === 'fixed' || !expense.value) {
+      return expense.value;
+    }
+    if (calculationMode === 'profit-from-price' && watchedQuotedPrice > 0) {
+      return (watchedQuotedPrice * expense.value) / 100;
+    }
+    return undefined; // Cannot calculate for price-from-profit mode without the final quote
+  };
+
   return (
     <>
       <Card>
@@ -425,10 +441,12 @@ export default function CalculatorComponent() {
 
                 <div className="space-y-4">
                   <FormLabel>Expenses</FormLabel>
-                  {fields.map((item, index) => (
+                  {fields.map((item, index) => {
+                    const calculatedValue = getCalculatedExpenseValue(expenses[index]);
+                    return (
                     <div
                       key={item.id}
-                      className="grid grid-cols-1 md:grid-cols-[1fr_120px_120px_auto] gap-2 p-3 border rounded-md relative"
+                      className="grid grid-cols-1 md:grid-cols-[1fr_120px_120px_120px_auto] gap-2 p-3 border rounded-md relative"
                     >
                       {fields.length > 1 && (
                         <Button
@@ -495,8 +513,21 @@ export default function CalculatorComponent() {
                           </FormItem>
                         )}
                       />
+                       <FormItem>
+                        <FormLabel className="text-xs">Calculated ($)</FormLabel>
+                        <FormControl>
+                            <Input 
+                                type="text"
+                                readOnly
+                                value={calculatedValue !== undefined ? calculatedValue.toFixed(2) : ''}
+                                placeholder={calculationMode === 'profit-from-price' ? '0.00' : 'N/A'}
+                                className="bg-muted"
+                                tabIndex={-1}
+                            />
+                        </FormControl>
+                       </FormItem>
                     </div>
-                  ))}
+                  )})}
                   <Button
                     type="button"
                     variant="outline"
