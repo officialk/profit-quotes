@@ -331,10 +331,14 @@ export default function CalculatorComponent() {
 
   const getCalculatedExpenseValue = (expense: Expense) => {
     if (expense.type === 'fixed' || !expense.value) {
-      return expense.value;
+      const valueAsNumber = Number(expense.value);
+      return isNaN(valueAsNumber) ? undefined : valueAsNumber;
     }
     if (calculationMode === 'profit-from-price' && watchedQuotedPrice > 0) {
-      return (watchedQuotedPrice * expense.value) / 100;
+        const valueAsNumber = Number(expense.value);
+        const priceAsNumber = Number(watchedQuotedPrice);
+        if (isNaN(valueAsNumber) || isNaN(priceAsNumber)) return undefined;
+        return (priceAsNumber * valueAsNumber) / 100;
     }
     return undefined; // Cannot calculate for price-from-profit mode without the final quote
   };
@@ -519,7 +523,7 @@ export default function CalculatorComponent() {
                             <Input 
                                 type="text"
                                 readOnly
-                                value={calculatedValue !== undefined ? calculatedValue.toFixed(2) : ''}
+                                value={typeof calculatedValue === 'number' ? calculatedValue.toFixed(2) : ''}
                                 placeholder={calculationMode === 'profit-from-price' ? '0.00' : 'N/A'}
                                 className="bg-muted"
                                 tabIndex={-1}
