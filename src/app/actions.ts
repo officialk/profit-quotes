@@ -19,7 +19,7 @@ const formatCurrency = (value: number) => {
 
 const ProfitFromPriceSchema = z.object({
   quotedPrice: z.number().positive('Quoted price must be positive.'),
-  expenseInput: z.string().min(1, 'Expenses are required.'),
+  expenses: z.array(z.object({ value: z.string().min(1, 'Expense cannot be empty.') })),
   label: z.string().optional(),
 });
 
@@ -35,11 +35,12 @@ export async function calculateProfitFromPriceAction(
         Object.values(validatedFields.error.flatten().fieldErrors).join(', '),
     };
   }
-  const { quotedPrice, expenseInput } = validatedFields.data;
+  const { quotedPrice, expenses } = validatedFields.data;
 
   try {
+    const expenseStrings = expenses.map(e => e.value);
     const aiResult = await interpretExpenseInput({
-      expenseInput,
+      expenseInput: expenseStrings.join(', '), // Join for the AI
       quotedPrice,
     });
 
@@ -48,7 +49,7 @@ export async function calculateProfitFromPriceAction(
 
     const summary = `For a quoted price of ${formatCurrency(
       quotedPrice
-    )} with expenses of ${formatCurrency(
+    )} with total expenses of ${formatCurrency(
       aiResult.expenseValue
     )}, your profit will be ${formatCurrency(profit)}.`;
 
@@ -72,7 +73,7 @@ export async function calculateProfitFromPriceAction(
 
 const PriceFromProfitSchema = z.object({
   targetProfit: z.number().positive('Target profit must be positive.'),
-  expenseInput: z.string().min(1, 'Expenses are required.'),
+  expenses: z.array(z.object({ value: z.string().min(1, 'Expense cannot be empty.') })),
   label: z.string().optional(),
 });
 
@@ -101,39 +102,42 @@ export async function calculatePriceFromProfitAction(
         Object.values(validatedFields.error.flatten().fieldErrors).join(', '),
     };
   }
-  const { targetProfit, expenseInput } = validatedFields.data;
+  const { targetProfit, expenses: expenseInputs } = validatedFields.data;
 
-  const expense = parseExpense(expenseInput);
+  let totalFixedExpenses = 0;
+  let totalPercentage = 0;
 
-  if (!expense) {
-    return {
-      status: 'error',
-      error:
-        'Invalid expense format. Use a number (e.g., 500) or a percentage (e.g., 15%).',
-    };
-  }
-
-  let quotedPrice = 0;
-  let expenseValue = 0;
-
-  if (expense.type === 'fixed') {
-    quotedPrice = targetProfit + expense.value;
-    expenseValue = expense.value;
-  } else {
-    if (expense.value >= 100) {
+  for (const expenseInput of expenseInputs) {
+    const expense = parseExpense(expenseInput.value);
+    if (!expense) {
       return {
         status: 'error',
         error:
-          'Expense percentage must be less than 100% to calculate a valid quoted price.',
+          `Invalid expense format: "${expenseInput.value}". Use a number (e.g., 500) or a percentage (e.g., 15%).`,
       };
     }
-    quotedPrice = targetProfit / (1 - expense.value / 100);
-    expenseValue = quotedPrice * (expense.value / 100);
+    if (expense.type === 'fixed') {
+      totalFixedExpenses += expense.value;
+    } else {
+      totalPercentage += expense.value;
+    }
   }
 
+  if (totalPercentage >= 100) {
+    return {
+      status: 'error',
+      error:
+        'Total expense percentage must be less than 100% to calculate a valid quoted price.',
+    };
+  }
+
+  const quotedPrice = (targetProfit + totalFixedExpenses) / (1 - totalPercentage / 100);
+  const totalExpenseValue = totalFixedExpenses + (quotedPrice * (totalPercentage / 100));
+
+  const expenseSummary = expenseInputs.map(e => e.value).join(', ');
   const summary = `To earn a profit of ${formatCurrency(
     targetProfit
-  )} with ${expenseInput} expenses, you should quote ${formatCurrency(
+  )} with ${expenseSummary} expenses, you should quote ${formatCurrency(
     quotedPrice
   )}.`;
 
@@ -141,7 +145,7 @@ export async function calculatePriceFromProfitAction(
     status: 'success',
     quotedPrice,
     profit: targetProfit,
-    expenses: expenseValue,
+    expenses: totalExpenseValue,
     summary,
   };
 }

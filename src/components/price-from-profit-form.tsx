@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import {
@@ -12,6 +12,8 @@ import {
   Tag,
   TrendingUp,
   Minus,
+  PlusCircle,
+  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -33,7 +35,11 @@ const formSchema = z.object({
   targetProfit: z.coerce
     .number()
     .positive({ message: "Target profit must be a positive number." }),
-  expenseInput: z.string().min(1, { message: "Expenses are required." }),
+  expenses: z.array(
+    z.object({
+      value: z.string().min(1, { message: "Expense cannot be empty." }),
+    })
+  ).min(1, { message: "At least one expense is required." }),
 });
 
 export default function PriceFromProfitForm() {
@@ -46,8 +52,13 @@ export default function PriceFromProfitForm() {
     defaultValues: {
       label: "",
       targetProfit: undefined,
-      expenseInput: "",
+      expenses: [{ value: "" }],
     },
+  });
+
+  const { fields, append, remove } = useFieldArray({
+    control: form.control,
+    name: "expenses",
   });
 
   function onSubmit(values: z.infer<typeof formSchema>) {
@@ -68,7 +79,11 @@ export default function PriceFromProfitForm() {
   }
 
   function handleReset() {
-    form.reset();
+    form.reset({
+      label: "",
+      targetProfit: undefined,
+      expenses: [{ value: "" }],
+    });
     setResult(null);
   }
 
@@ -80,7 +95,7 @@ export default function PriceFromProfitForm() {
       <CardContent>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="space-y-4">
               <FormField
                 control={form.control}
                 name="targetProfit"
@@ -102,26 +117,55 @@ export default function PriceFromProfitForm() {
                   </FormItem>
                 )}
               />
-              <FormField
-                control={form.control}
-                name="expenseInput"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Expenses</FormLabel>
-                    <div className="relative">
-                      <Info className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                      <FormControl>
-                        <Input
-                          placeholder="500 or 15%"
-                          className="pl-9"
-                          {...field}
-                        />
-                      </FormControl>
-                    </div>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+
+              <div className="space-y-2">
+                 <FormLabel>Expenses</FormLabel>
+                 {fields.map((item, index) => (
+                   <FormField
+                     key={item.id}
+                     control={form.control}
+                     name={`expenses.${index}.value`}
+                     render={({ field }) => (
+                       <FormItem>
+                         <div className="flex items-center gap-2">
+                           <div className="relative flex-grow">
+                             <Info className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                             <FormControl>
+                               <Input
+                                 placeholder="e.g., 500 or 15%"
+                                 className="pl-9"
+                                 {...field}
+                               />
+                             </FormControl>
+                           </div>
+                           {fields.length > 1 && (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="h-9 w-9 shrink-0"
+                              onClick={() => remove(index)}
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                           )}
+                         </div>
+                         <FormMessage />
+                       </FormItem>
+                     )}
+                   />
+                 ))}
+                 <Button
+                   type="button"
+                   variant="outline"
+                   size="sm"
+                   className="mt-2"
+                   onClick={() => append({ value: "" })}
+                 >
+                   <PlusCircle className="mr-2 h-4 w-4" />
+                   Add Expense
+                 </Button>
+               </div>
             </div>
             <FormField
               control={form.control}

@@ -1,7 +1,7 @@
 'use server';
 
 /**
- * @fileOverview A flow that interprets the expense input, determining whether it's a fixed amount or a percentage.
+ * @fileOverview A flow that interprets a list of expense inputs, determining whether each is a fixed amount or a percentage and calculating the total.
  *
  * - interpretExpenseInput - A function that handles the expense input interpretation.
  * - InterpretExpenseInputInput - The input type for the interpretExpenseInput function.
@@ -14,17 +14,16 @@ import {z} from 'genkit';
 const InterpretExpenseInputInputSchema = z.object({
   expenseInput: z
     .string()
-    .describe('The expense input string, which can be a fixed amount or a percentage (e.g., "500" or "15%").'),
+    .describe('A comma-separated string of expense inputs, where each can be a fixed amount or a percentage (e.g., "500, 15%, 25.50").'),
   quotedPrice: z.number().describe('The quoted price.'),
 });
 export type InterpretExpenseInputInput = z.infer<typeof InterpretExpenseInputInputSchema>;
 
 const InterpretExpenseInputOutputSchema = z.object({
-  expenseType: z.enum(['fixed', 'percentage']).describe('The type of expense input: "fixed" or "percentage".'),
-  expenseValue: z.number().describe('The numerical value of the expense.'),
+  expenseValue: z.number().describe('The total numerical value of all combined expenses.'),
   interpretedExpense: z
     .string()
-    .describe('The interpretation of the expense, including the total value and type.'),
+    .describe('A summary of the total interpreted expense.'),
 });
 export type InterpretExpenseInputOutput = z.infer<typeof InterpretExpenseInputOutputSchema>;
 
@@ -38,7 +37,13 @@ const prompt = ai.definePrompt({
   name: 'interpretExpenseInputPrompt',
   input: {schema: InterpretExpenseInputInputSchema},
   output: {schema: InterpretExpenseInputOutputSchema},
-  prompt: `You are an expert financial assistant. Your job is to determine the type and value of an expense input.  The expense input will be a string, which can be a fixed amount or a percentage of the quoted price (e.g., \"500\" or \"15%\").  You must determine whether it is a fixed amount or a percentage.  If it is a percentage, calculate the expense value as a percentage of the quotedPrice.
+  prompt: `You are an expert financial assistant. Your job is to calculate the total value of a list of expenses. The expense input will be a comma-separated string, where each item can be a fixed amount or a percentage of the quoted price (e.g., "500, 15%, 25.50").
+
+You must parse each item in the list.
+- If an item is a percentage, calculate its value based on the quotedPrice.
+- If an item is a fixed amount, use its numerical value.
+- Sum up all calculated values to get the total expenseValue.
+- For the interpretedExpense, provide a human-readable summary of the total expenses (e.g., "Total expenses of $675.50").
 
 Expense Input: {{{expenseInput}}}
 Quoted Price: {{{quotedPrice}}}
