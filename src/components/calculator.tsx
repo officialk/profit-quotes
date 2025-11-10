@@ -328,6 +328,7 @@ export default function CalculatorComponent() {
   }
 
   const getCalculatedExpenseValue = (expense: Expense) => {
+    if (!expense) return undefined; // Guard against undefined expense
     if (expense.type === 'fixed' || !expense.value) {
       const valueAsNumber = Number(expense.value);
       return isNaN(valueAsNumber) ? undefined : valueAsNumber;
@@ -634,5 +635,3 @@ export default function CalculatorComponent() {
     </>
   );
 }
-
-    
