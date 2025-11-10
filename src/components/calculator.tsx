@@ -547,6 +547,15 @@ export default function CalculatorComponent() {
                 </div>
               </div>
 
+              {isPending && (
+                <div className="mt-6 text-center">
+                  <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
+                  <p className="mt-2 text-muted-foreground">Calculating...</p>
+                </div>
+              )}
+
+              {!isPending && renderResult()}
+              
               <FormField
                 control={form.control}
                 name="label"
@@ -601,15 +610,6 @@ export default function CalculatorComponent() {
               </div>
             </form>
           </Form>
-
-          {isPending && (
-            <div className="mt-6 text-center">
-              <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
-              <p className="mt-2 text-muted-foreground">Calculating...</p>
-            </div>
-          )}
-
-          {!isPending && renderResult()}
         </CardContent>
       </Card>
       
@@ -621,3 +621,5 @@ export default function CalculatorComponent() {
     </>
   );
 }
+
+    
