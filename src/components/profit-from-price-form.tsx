@@ -171,7 +171,7 @@ export default function ProfitFromPriceForm() {
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent>
-                                <SelectItem value="fixed">USD</SelectItem>
+                                <SelectItem value="fixed">$</SelectItem>
                                 <SelectItem value="percentage">%</SelectItem>
                               </SelectContent>
                             </Select>
