@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useEffect } from "react";
 import { useForm, useFieldArray, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -42,6 +42,7 @@ import { useToast } from "@/hooks/use-toast";
 import type {
   PriceFromProfitResult,
   ProfitFromPriceResult,
+  Expense,
 } from "@/lib/types";
 
 const formSchema = z.discriminatedUnion("calculationMode", [
@@ -85,6 +86,27 @@ const formSchema = z.discriminatedUnion("calculationMode", [
 
 type Result = ProfitFromPriceResult | PriceFromProfitResult;
 
+const EXPENSES_STORAGE_KEY = 'profitpro-expenses';
+
+const getDefaultExpenses = (): Expense[] => {
+    if (typeof window === 'undefined') {
+        return [{ label: "", value: undefined, type: "fixed" }];
+    }
+    try {
+        const storedExpenses = localStorage.getItem(EXPENSES_STORAGE_KEY);
+        if (storedExpenses) {
+            const parsed = JSON.parse(storedExpenses);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              return parsed.map(p => ({...p, value: p.value || undefined}));
+            }
+        }
+    } catch (error) {
+        console.error("Failed to parse expenses from localStorage", error);
+    }
+    return [{ label: "", value: undefined, type: "fixed" }];
+};
+
+
 export default function CalculatorComponent() {
   const [isPending, startTransition] = useTransition();
   const [result, setResult] = useState<Result | null>(null);
@@ -95,7 +117,7 @@ export default function CalculatorComponent() {
     defaultValues: {
       calculationMode: "profit-from-price",
       label: "",
-      expenses: [{ label: "", value: undefined, type: "fixed" }],
+      expenses: getDefaultExpenses(),
     },
   });
 
@@ -108,6 +130,20 @@ export default function CalculatorComponent() {
     control: form.control,
     name: "calculationMode",
   });
+
+  const expenses = useWatch({
+    control: form.control,
+    name: 'expenses'
+  })
+
+  useEffect(() => {
+    try {
+        localStorage.setItem(EXPENSES_STORAGE_KEY, JSON.stringify(expenses));
+    } catch (error) {
+        console.error("Failed to save expenses to localStorage", error);
+    }
+  }, [expenses]);
+
 
   function onSubmit(values: z.infer<typeof formSchema>) {
     setResult(null);

@@ -1,3 +1,9 @@
+export type Expense = {
+  label: string;
+  value: number | undefined;
+  type: 'fixed' | 'percentage';
+};
+
 export type ProfitFromPriceResult = {
   status: 'success';
   profit: number;
