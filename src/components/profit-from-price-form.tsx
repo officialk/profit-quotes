@@ -16,6 +16,13 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { calculateProfitFromPriceAction } from "@/app/actions";
 import { useToast } from "@/hooks/use-toast";
 import type { ProfitFromPriceResult } from "@/lib/types";
@@ -27,7 +34,9 @@ const formSchema = z.object({
     .positive({ message: "Quoted price must be a positive number." }),
   expenses: z.array(
     z.object({
-      value: z.string().min(1, { message: "Expense cannot be empty." }),
+      label: z.string().min(1, { message: "Expense label is required." }),
+      value: z.coerce.number().positive({ message: "Expense value must be positive." }),
+      type: z.enum(['fixed', 'percentage']),
     })
   ).min(1, { message: "At least one expense is required." }),
 });
@@ -42,7 +51,7 @@ export default function ProfitFromPriceForm() {
     defaultValues: {
       label: "",
       quotedPrice: undefined,
-      expenses: [{ value: "" }],
+      expenses: [{ label: "", value: undefined, type: "fixed" }],
     },
   });
 
@@ -72,7 +81,7 @@ export default function ProfitFromPriceForm() {
     form.reset({
       label: "",
       quotedPrice: undefined,
-      expenses: [{ value: "" }],
+      expenses: [{ label: "", value: undefined, type: "fixed" }],
     });
     setResult(null);
   }
@@ -108,49 +117,76 @@ export default function ProfitFromPriceForm() {
                 )}
               />
 
-              <div className="space-y-2">
+              <div className="space-y-4">
                  <FormLabel>Expenses</FormLabel>
                  {fields.map((item, index) => (
-                   <FormField
-                     key={item.id}
-                     control={form.control}
-                     name={`expenses.${index}.value`}
-                     render={({ field }) => (
-                       <FormItem>
-                         <div className="flex items-center gap-2">
-                           <div className="relative flex-grow">
-                             <Info className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                             <FormControl>
-                               <Input
-                                 placeholder="e.g., 500 or 15%"
-                                 className="pl-9"
-                                 {...field}
-                               />
-                             </FormControl>
-                           </div>
-                           {fields.length > 1 && (
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              className="h-9 w-9 shrink-0"
-                              onClick={() => remove(index)}
-                            >
-                              <X className="h-4 w-4" />
-                            </Button>
-                           )}
-                         </div>
-                         <FormMessage />
-                       </FormItem>
-                     )}
-                   />
+                   <div key={item.id} className="grid grid-cols-1 md:grid-cols-[1fr_120px_120px_auto] gap-2 p-3 border rounded-md relative">
+                      {fields.length > 1 && (
+                         <Button
+                           type="button"
+                           variant="ghost"
+                           size="icon"
+                           className="h-6 w-6 shrink-0 absolute -top-3 -right-3 bg-card"
+                           onClick={() => remove(index)}
+                         >
+                           <X className="h-4 w-4" />
+                         </Button>
+                       )}
+                     <FormField
+                       control={form.control}
+                       name={`expenses.${index}.label`}
+                       render={({ field }) => (
+                         <FormItem>
+                           <FormLabel className="text-xs">Label</FormLabel>
+                           <FormControl>
+                             <Input placeholder="e.g., Materials" {...field} />
+                           </FormControl>
+                           <FormMessage />
+                         </FormItem>
+                       )}
+                     />
+                      <FormField
+                       control={form.control}
+                       name={`expenses.${index}.value`}
+                       render={({ field }) => (
+                         <FormItem>
+                           <FormLabel className="text-xs">Value</FormLabel>
+                           <FormControl>
+                             <Input type="number" placeholder="e.g., 500" {...field} />
+                           </FormControl>
+                           <FormMessage />
+                         </FormItem>
+                       )}
+                     />
+                      <FormField
+                        control={form.control}
+                        name={`expenses.${index}.type`}
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-xs">Type</FormLabel>
+                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select type" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="fixed">USD</SelectItem>
+                                <SelectItem value="percentage">%</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                   </div>
                  ))}
                  <Button
                    type="button"
                    variant="outline"
                    size="sm"
                    className="mt-2"
-                   onClick={() => append({ value: "" })}
+                   onClick={() => append({ label: "", value: undefined, type: "fixed" })}
                  >
                    <PlusCircle className="mr-2 h-4 w-4" />
                    Add Expense
