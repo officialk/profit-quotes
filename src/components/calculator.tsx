@@ -368,6 +368,26 @@ export default function CalculatorComponent() {
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
               <FormField
                 control={form.control}
+                name="label"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Project Name (Optional)</FormLabel>
+                    <div className="relative">
+                      <Tag className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                      <FormControl>
+                        <Input
+                          placeholder="e.g., Q3 Marketing Campaign"
+                          className="pl-9"
+                          {...field}
+                        />
+                      </FormControl>
+                    </div>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
                 name="calculationMode"
                 render={({ field }) => (
                   <FormItem className="space-y-3">
@@ -570,27 +590,6 @@ export default function CalculatorComponent() {
 
               {!isPending && renderResult()}
               
-              <FormField
-                control={form.control}
-                name="label"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Project Name (Optional)</FormLabel>
-                    <div className="relative">
-                      <Tag className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                      <FormControl>
-                        <Input
-                          placeholder="e.g., Q3 Marketing Campaign"
-                          className="pl-9"
-                          {...field}
-                        />
-                      </FormControl>
-                    </div>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
               <div className="flex flex-col gap-4 sm:flex-row sm:justify-between">
                 <Button
                     type="button"
