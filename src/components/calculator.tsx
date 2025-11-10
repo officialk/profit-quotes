@@ -161,6 +161,13 @@ export default function CalculatorComponent() {
     // @ts-ignore
     name: 'quotedPrice'
   });
+  
+  const watchedTargetProfit = useWatch({
+    control: form.control,
+    // @ts-ignore
+    name: 'targetProfit'
+  });
+
 
   useEffect(() => {
     if (isClient) {
@@ -328,18 +335,52 @@ export default function CalculatorComponent() {
   }
 
   const getCalculatedExpenseValue = (expense: Expense) => {
-    if (!expense) return undefined; // Guard against undefined expense
+    if (!expense) return undefined;
+  
     if (expense.type === 'fixed' || !expense.value) {
       const valueAsNumber = Number(expense.value);
       return isNaN(valueAsNumber) ? undefined : valueAsNumber;
     }
-    if (calculationMode === 'profit-from-price' && watchedQuotedPrice > 0) {
+  
+    // Handle 'profit-from-price' mode
+    if (calculationMode === 'profit-from-price') {
+      const priceAsNumber = Number(watchedQuotedPrice);
+      if (priceAsNumber > 0) {
         const valueAsNumber = Number(expense.value);
-        const priceAsNumber = Number(watchedQuotedPrice);
-        if (isNaN(valueAsNumber) || isNaN(priceAsNumber)) return undefined;
+        if (isNaN(valueAsNumber)) return undefined;
         return (priceAsNumber * valueAsNumber) / 100;
+      }
+      return undefined;
     }
-    return undefined; // Cannot calculate for price-from-profit mode without the final quote
+  
+    // Handle 'price-from-profit' mode
+    if (calculationMode === 'price-from-profit') {
+      const targetProfitNum = Number(watchedTargetProfit);
+      if (targetProfitNum > 0 && Array.isArray(expenses)) {
+        let totalFixedExpenses = 0;
+        let totalPercentage = 0;
+        
+        for (const exp of expenses) {
+          if (exp && exp.value) {
+            if (exp.type === 'fixed') {
+              totalFixedExpenses += Number(exp.value) || 0;
+            } else {
+              totalPercentage += Number(exp.value) || 0;
+            }
+          }
+        }
+        
+        if (totalPercentage < 100) {
+          const preliminaryQuotedPrice = (targetProfitNum + totalFixedExpenses) / (1 - totalPercentage / 100);
+          const expenseValue = Number(expense.value);
+          if (isNaN(expenseValue)) return undefined;
+          return (preliminaryQuotedPrice * expenseValue) / 100;
+        }
+      }
+      return undefined;
+    }
+  
+    return undefined;
   };
   
   if (!isClient) {
@@ -366,6 +407,8 @@ export default function CalculatorComponent() {
         <CardContent>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+              {!isPending && renderResult()}
+              
               <FormField
                 control={form.control}
                 name="label"
@@ -558,7 +601,7 @@ export default function CalculatorComponent() {
                                 type="text"
                                 readOnly
                                 value={typeof calculatedValue === 'number' ? calculatedValue.toFixed(2) : ''}
-                                placeholder={calculationMode === 'profit-from-price' ? '0.00' : 'N/A'}
+                                placeholder={calculationMode === 'profit-from-price' || (calculationMode === 'price-from-profit' && watchedTargetProfit > 0) ? '0.00' : 'N/A'}
                                 className="bg-muted"
                                 tabIndex={-1}
                             />
@@ -588,7 +631,6 @@ export default function CalculatorComponent() {
                 </div>
               )}
 
-              {!isPending && renderResult()}
               
               <div className="flex flex-col gap-4 sm:flex-row sm:justify-between">
                 <Button
