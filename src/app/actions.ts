@@ -1,7 +1,6 @@
 'use server';
 
 import { z } from 'zod';
-import { interpretExpenseInput } from '@/ai/flows/interpret-expense-input';
 import type {
   PriceFromProfitActionResponse,
   ProfitFromPriceActionResponse,
@@ -16,7 +15,7 @@ const formatCurrency = (value: number) => {
 };
 
 // --- Common Expense Schema ---
-const expenseSchema = z.object({ 
+const expenseSchema = z.object({
   label: z.string().min(1, { message: "Expense label is required." }),
   value: z.coerce.number().positive({ message: "Expense value must be positive." }),
   type: z.enum(['fixed', 'percentage'])
@@ -46,35 +45,39 @@ export async function calculateProfitFromPriceAction(
   const { quotedPrice, expenses } = validatedFields.data;
 
   try {
-    // The AI flow can't handle zero quoted price for percentage calculations.
-    const tempQuotedPriceForAI = quotedPrice > 0 ? quotedPrice : 1;
-    const expenseStrings = expenses.map(e => e.type === 'fixed' ? `${e.value}` : `${e.value}%`);
+    let totalExpenseValue = 0;
+    for (const expense of expenses) {
+      if (expense.type === 'fixed') {
+        totalExpenseValue += expense.value;
+      } else {
+        totalExpenseValue += (quotedPrice * expense.value) / 100;
+      }
+    }
     
-    const aiResult = await interpretExpenseInput({
-      expenseInput: expenseStrings.join(', '),
-      quotedPrice: tempQuotedPriceForAI,
-    });
+    const profit = quotedPrice - totalExpenseValue;
 
-    const profit = quotedPrice - aiResult.expenseValue;
+    const interpretedExpense = `Total expenses of ${formatCurrency(
+      totalExpenseValue
+    )}`;
 
     const summary = `For a quoted price of ${formatCurrency(
       quotedPrice
     )} with total expenses of ${formatCurrency(
-      aiResult.expenseValue
+      totalExpenseValue
     )}, your profit will be ${formatCurrency(profit)}.`;
 
     return {
       status: 'success',
       profit,
-      expenseInterpretation: aiResult.interpretedExpense,
+      expenseInterpretation: interpretedExpense,
       summary,
     };
   } catch (error) {
-    console.error('AI Error:', error);
+    console.error('Calculation Error:', error);
     return {
       status: 'error',
       error:
-        'Could not interpret expenses. Please try a different format.',
+        'Could not calculate profit. Please check your inputs.',
     };
   }
 }
