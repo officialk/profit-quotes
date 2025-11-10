@@ -459,12 +459,12 @@ export default function CalculatorComponent() {
               name="label"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Project Label (Optional)</FormLabel>
+                  <FormLabel>Project Name (Optional)</FormLabel>
                   <div className="relative">
                     <Tag className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                     <FormControl>
                       <Input
-                        placeholder="e.g., Website Redesign"
+                        placeholder="e.g., Q3 Marketing Campaign"
                         className="pl-9"
                         {...field}
                       />
